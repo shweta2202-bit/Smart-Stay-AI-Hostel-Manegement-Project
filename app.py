@@ -5,7 +5,7 @@ import sqlite3
 
 # ---------- PROJECT PATHS ----------
 BASE_DIR = Path(__file__).resolve().parent
-FRONTEND_DIR = BASE_DIR.parent / "frontend"
+FRONTEND_DIR = BASE_DIR
 DB_PATH = BASE_DIR / "hostel.db"
 
 # Serve frontend files: index.html, style.css, script.js
@@ -456,6 +456,13 @@ def dashboard():
 
 
 # ---------- START SERVER ----------
+# Initialize database when the application starts
+init_db()
+
 if __name__ == "__main__":
-    init_db()
-    app.run(debug=True)
+    import os
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        debug=False
+    )
