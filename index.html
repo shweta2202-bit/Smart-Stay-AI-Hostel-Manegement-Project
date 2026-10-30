@@ -1,0 +1,171 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hostel Management</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-icon">✦</span><div>RAJMATA JIJAU<small>HOSTEL MANAGEMENT</small></div></div>
+    <nav>
+      <button class="nav-link active" data-page="dashboard">▦ Dashboard</button>
+      <button class="nav-link" data-page="students">♙ Students</button>
+      <button class="nav-link" data-page="rooms">▤ Room Management</button>
+      <button class="nav-link" data-page="complaints">⚑ Complaints</button>
+      <button class="nav-link" data-page="notices">◉ Notice Board</button>
+      <button class="nav-link" data-page="contacts">☎ Contacts</button>
+      <button class="nav-link" data-page="reports">▥ Reports</button>
+    </nav>
+    <div class="sidebar-footer"><span class="status-dot"></span> Hostel system online</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">HOSTEL ADMINISTRATION</p>
+        <h1 id="pageTitle">Dashboard</h1>
+      </div>
+      <div class="top-right"><span class="live-pill">● LIVE SYSTEM</span><div class="avatar">N</div></div>
+    </header>
+
+    <section class="page active" id="dashboard">
+      <div class="welcome panel">
+        <div><p class="eyebrow">WELCOME</p><h2>Smarter hostel management.</h2>
+          <p>Manage students, rooms, complaints and hostel updates in one place.</p></div>
+        <div class="welcome-art">✦</div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><span>Total Rooms</span><strong id="totalRooms">250</strong><small>Configured hostel rooms</small></div>
+        <div class="stat-card"><span>Total Bed Capacity</span><strong id="totalBeds">1,000</strong><small>4 beds per room</small></div>
+        <div class="stat-card"><span>Registered Students</span><strong id="totalStudents">0</strong><small>Student records</small></div>
+        <div class="stat-card"><span>Available Beds</span><strong id="availableBeds">1,000</strong><small>Beds not currently assigned</small></div>
+      </div>
+      <div class="two-col">
+        <div class="panel">
+          <div class="section-heading"><div><p class="eyebrow">ROOM STATUS</p><h3>Occupancy overview</h3></div><button class="small-btn" data-goto="rooms">View rooms →</button></div>
+          <div class="progress-row"><span>Occupied beds</span><strong id="occupiedLabel">0 / 1,000</strong></div>
+          <div class="progress-track"><div id="occupancyBar" class="progress-fill"></div></div>
+          <div class="mini-stats"><div><strong id="occupiedRooms">0</strong><span>Rooms with students</span></div><div><strong id="emptyRooms">250</strong><span>Rooms with no students</span></div></div>
+        </div>
+        <div class="panel">
+          <div class="section-heading"><div><p class="eyebrow">QUICK ACTIONS</p><h3>Get things done</h3></div></div>
+          <div class="quick-actions">
+            <button data-goto="students">＋ Register student</button>
+            <button data-goto="rooms">▤ Allocate a room</button>
+            <button data-goto="complaints">⚑ Add complaint</button>
+            <button data-goto="notices">◉ Publish notice</button>
+          </div>
+        </div>
+      </div>
+      <div class="panel"><div class="section-heading"><div><p class="eyebrow">LATEST ACTIVITY</p><h3>Recent students</h3></div><button class="small-btn" data-goto="students">All students →</button></div>
+        <div id="recentStudents" class="empty-state">No students registered yet.</div>
+      </div>
+    </section>
+
+    <section class="page" id="students">
+      <div class="panel">
+        <div class="section-heading"><div><p class="eyebrow">STUDENT RECORDS</p><h3>Register a student</h3></div></div>
+        <form id="studentForm" class="form-grid">
+          <label>Full name<input id="studentName" required placeholder="Enter student name"></label>
+          <label>Student ID / Roll No.<input id="studentId" required placeholder="e.g. AIML2026-01"></label>
+          <label>Contact number<input id="studentPhone" type="tel" placeholder="Phone number"></label>
+          <label>Course / Department<input id="studentCourse" placeholder="e.g. AIML"></label>
+          <label>Room number<select id="studentRoom"><option value="">Not allocated yet</option></select></label>
+          <div class="form-action"><button class="primary-btn" type="submit">＋ Add student</button></div>
+        </form>
+      </div>
+      <div class="panel">
+        <div class="section-heading"><div><p class="eyebrow">DIRECTORY</p><h3>All students</h3></div><input id="studentSearch" class="search-input" placeholder="Search students..."></div>
+        <div class="table-wrap"><table><thead><tr><th>Name</th><th>Student ID</th><th>Course</th><th>Phone</th><th>Room</th><th>Action</th></tr></thead><tbody id="studentTable"></tbody></table></div>
+        <div id="studentEmpty" class="empty-state">No student records found.</div>
+      </div>
+    </section>
+
+    <section class="page" id="rooms">
+      <div class="stats-grid room-stats">
+        <div class="stat-card"><span>Total Rooms</span><strong id="roomCount">250</strong></div>
+        <div class="stat-card"><span>Total Beds</span><strong id="roomBedCount">1,000</strong></div>
+        <div class="stat-card"><span>Occupied Beds</span><strong id="roomOccupied">0</strong></div>
+        <div class="stat-card"><span>Free Beds</span><strong id="roomFree">1,000</strong></div>
+      </div>
+      <div class="panel">
+        <div class="section-heading"><div><p class="eyebrow">ROOM DIRECTORY</p><h3>Room allocation</h3><p class="muted">250 rooms configured · 4 beds in every room</p></div>
+          <input id="roomSearch" class="search-input" placeholder="Search room number..."></div>
+        <div id="roomGrid" class="room-grid"></div>
+        <p class="muted tiny">Room numbers: A101–A350. Each room has a maximum capacity of 4 students.</p>
+      </div>
+      <div class="panel">
+        <div class="section-heading"><div><p class="eyebrow">ALLOCATE STUDENT</p><h3>Assign an available bed</h3></div></div>
+        <form id="allocationForm" class="form-grid">
+          <label>Student<select id="allocationStudent" required></select></label>
+          <label>Available room<select id="allocationRoom" required></select></label>
+          <div class="form-action"><button class="primary-btn" type="submit">Allocate room</button></div>
+        </form>
+        <p class="muted">Students already assigned to a room will not appear in the student list above.</p>
+      </div>
+    </section>
+
+    <section class="page" id="complaints">
+      <div class="panel">
+        <div class="section-heading"><div><p class="eyebrow">HOSTEL SUPPORT</p><h3>Submit a complaint</h3></div></div>
+        <form id="complaintForm" class="form-grid">
+          <label>Student name<input id="complaintStudent" required placeholder="Student name"></label>
+          <label>Room number<select id="complaintRoom"></select></label>
+          <label class="full-width">Complaint details<textarea id="complaintText" required rows="3" placeholder="Describe the problem..."></textarea></label>
+          <div class="form-action"><button class="primary-btn" type="submit">＋ Submit complaint</button></div>
+        </form>
+        <p class="muted">Complaints are categorized using simple keyword rules; this is not a trained AI model.</p>
+      </div>
+      <div class="panel"><div class="section-heading"><div><p class="eyebrow">TRACKING</p><h3>Complaint records</h3></div></div><div id="complaintList" class="stack-list"></div><div id="complaintEmpty" class="empty-state">No complaints yet.</div></div>
+    </section>
+
+    <section class="page" id="notices">
+      <div class="panel">
+        <div class="section-heading"><div><p class="eyebrow">HOSTEL ANNOUNCEMENTS</p><h3>Publish a notice</h3></div></div>
+        <form id="noticeForm" class="form-grid">
+          <label>Notice title<input id="noticeTitle" required placeholder="e.g. Hostel meeting"></label>
+          <label>Priority<select id="noticePriority"><option>Normal</option><option>Important</option><option>Urgent</option></select></label>
+          <label class="full-width">Notice message<textarea id="noticeMessage" rows="3" required placeholder="Write the announcement..."></textarea></label>
+          <div class="form-action"><button class="primary-btn" type="submit">＋ Publish notice</button></div>
+        </form>
+      </div>
+      <div class="panel"><div class="section-heading"><div><p class="eyebrow">NOTICE BOARD</p><h3>Published notices</h3></div></div><div id="noticeList" class="notice-list"></div><div id="noticeEmpty" class="empty-state">No notices published yet.</div></div>
+    </section>
+
+    <section class="page" id="contacts">
+      <div class="panel"><div class="section-heading"><div><p class="eyebrow">IMPORTANT NUMBERS</p><h3>Hostel contact directory</h3></div></div><div id="contactCards" class="contact-grid"></div></div>
+      <div class="panel"><div class="section-heading"><div><p class="eyebrow">DIRECTORY SETTINGS</p><h3>Edit contact details</h3></div></div>
+        <form id="contactForm" class="form-grid">
+          <label>Rector 1 name<input id="rector1Name" required></label><label>Rector 1 number<input id="rector1Phone" type="tel" required></label>
+          <label>Rector 2 name<input id="rector2Name" required></label><label>Rector 2 number<input id="rector2Phone" type="tel" required></label>
+          <label>Watchman name<input id="watchmanName" required></label><label>Watchman number<input id="watchmanPhone" type="tel" required></label>
+          <label>Hostel landline label<input id="landlineName" required></label><label>Hostel landline number<input id="landlinePhone" type="tel" required></label>
+          <div class="form-action"><button class="primary-btn" type="submit">Save contact details</button></div>
+        </form>
+        <p class="muted">Enter your real hostel phone numbers. Contact details are stored in this browser only.</p>
+      </div>
+    </section>
+
+    <section class="page" id="reports">
+      <div class="panel"><div class="section-heading"><div><p class="eyebrow">HOSTEL ANALYTICS</p><h3>Management reports</h3></div><button id="exportCsv" class="primary-btn">↓ Export students CSV</button></div>
+        <div class="report-grid">
+          <div class="report-card"><span>Total rooms</span><strong id="reportRooms">250</strong></div>
+          <div class="report-card"><span>Total capacity</span><strong id="reportCapacity">1,000</strong></div>
+          <div class="report-card"><span>Registered students</span><strong id="reportStudents">0</strong></div>
+          <div class="report-card"><span>Available beds</span><strong id="reportAvailable">1,000</strong></div>
+          <div class="report-card"><span>Complaints submitted</span><strong id="reportComplaints">0</strong></div>
+          <div class="report-card"><span>Notices published</span><strong id="reportNotices">0</strong></div>
+        </div>
+        <p class="muted">Reports use data saved in your current browser. Export creates a CSV file of registered students.</p>
+      </div>
+    </section>
+
+    <footer>© 2026 NOVA Hostel Management <span>Designed for smarter campus living ✦</span></footer>
+  </main>
+  <div id="toast" class="toast" role="status"></div>
+  <script src="script.js"></script>
+</body>
+</html>
