@@ -7,7 +7,7 @@ from psycopg.rows import dict_row
 
 # ---------- PROJECT PATHS ----------
 BASE_DIR = Path(__file__).resolve().parent
-FRONTEND_DIR = BASE_DIR.parent / "frontend"
+FRONTEND_DIR = BASE_DIR
 DB_PATH = BASE_DIR / "hostel.db"
 
 # Serve frontend files: index.html, style.css, script.js
