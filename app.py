@@ -1,11 +1,13 @@
 
 from flask import Flask, request, jsonify, send_from_directory
 from pathlib import Path
-import sqlite3
+import os
+import psycopg
+from psycopg.rows import dict_row
 
 # ---------- PROJECT PATHS ----------
 BASE_DIR = Path(__file__).resolve().parent
-FRONTEND_DIR = BASE_DIR
+FRONTEND_DIR = BASE_DIR.parent / "frontend"
 DB_PATH = BASE_DIR / "hostel.db"
 
 # Serve frontend files: index.html, style.css, script.js
@@ -18,20 +20,21 @@ app = Flask(
 
 # ---------- DATABASE ----------
 def get_db():
-    con = sqlite3.connect(DB_PATH)
-    con.row_factory = sqlite3.Row
-    con.execute("PRAGMA foreign_keys = ON")
-    return con
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL is not set in the environment.")
+    return psycopg.connect(database_url, row_factory=dict_row)
 
 
 def init_db():
     with get_db() as con:
-        con.executescript("""
+        con.execute("""
             CREATE TABLE IF NOT EXISTS rooms (
                 id INTEGER PRIMARY KEY,
                 capacity INTEGER NOT NULL DEFAULT 4
-            );
-
+            )
+        """)
+        con.execute("""
             CREATE TABLE IF NOT EXISTS students (
                 student_id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -39,33 +42,36 @@ def init_db():
                 course TEXT DEFAULT '',
                 room_id INTEGER,
                 FOREIGN KEY (room_id) REFERENCES rooms(id)
-            );
-
+            )
+        """)
+        con.execute("""
             CREATE TABLE IF NOT EXISTS complaints (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id BIGSERIAL PRIMARY KEY,
                 student_name TEXT NOT NULL,
                 room_id INTEGER,
                 message TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'Pending'
-            );
-
+            )
+        """)
+        con.execute("""
             CREATE TABLE IF NOT EXISTS notices (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                id BIGSERIAL PRIMARY KEY,
                 title TEXT NOT NULL,
                 priority TEXT NOT NULL DEFAULT 'Normal',
                 message TEXT NOT NULL
-            );
-
+            )
+        """)
+        con.execute("""
             CREATE TABLE IF NOT EXISTS contacts (
                 role TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 phone TEXT NOT NULL
-            );
+            )
         """)
 
         # Create rooms 1–250, each with four beds.
         con.executemany(
-            "INSERT OR IGNORE INTO rooms (id, capacity) VALUES (?, 4)",
+            "INSERT INTO rooms (id, capacity) VALUES (%s, 4) ON CONFLICT (id) DO NOTHING",
             [(i,) for i in range(1, 251)]
         )
 
@@ -81,16 +87,16 @@ def query_all(sql, params=()):
 def room_details(room_id):
     with get_db() as con:
         room = con.execute(
-            "SELECT * FROM rooms WHERE id = ?", (room_id,)
+            "SELECT * FROM rooms WHERE id = %s", (room_id,)
         ).fetchone()
 
         if room is None:
             return None
 
         occupied = con.execute(
-            "SELECT COUNT(*) FROM students WHERE room_id = ?",
+            "SELECT COUNT(*) AS count FROM students WHERE room_id = %s",
             (room_id,)
-        ).fetchone()[0]
+        ).fetchone()["count"]
 
         return {
             "id": room_id,
@@ -98,6 +104,10 @@ def room_details(room_id):
             "occupied": occupied,
             "available": room["capacity"] - occupied
         }
+
+
+# Initialize PostgreSQL tables when the application starts.
+init_db()
 
 
 # ---------- FRONTEND ----------
@@ -171,7 +181,7 @@ def add_student():
         with get_db() as con:
             if room_id is not None:
                 room = con.execute(
-                    "SELECT capacity FROM rooms WHERE id = ?",
+                    "SELECT capacity FROM rooms WHERE id = %s",
                     (room_id,)
                 ).fetchone()
 
@@ -179,9 +189,9 @@ def add_student():
                     return jsonify({"error": "Room not found."}), 404
 
                 occupied = con.execute(
-                    "SELECT COUNT(*) FROM students WHERE room_id = ?",
+                    "SELECT COUNT(*) AS count FROM students WHERE room_id = %s",
                     (room_id,)
-                ).fetchone()[0]
+                ).fetchone()["count"]
 
                 if occupied >= room["capacity"]:
                     return jsonify({"error": "Room is full."}), 409
@@ -189,10 +199,10 @@ def add_student():
             con.execute("""
                 INSERT INTO students
                 (student_id, name, phone, course, room_id)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s)
             """, (student_id, name, phone, course, room_id))
 
-    except sqlite3.IntegrityError:
+    except psycopg.errors.UniqueViolation:
         return jsonify({
             "error": "This student ID already exists."
         }), 409
@@ -204,7 +214,7 @@ def add_student():
 def delete_student(student_id):
     with get_db() as con:
         result = con.execute(
-            "DELETE FROM students WHERE student_id = ?",
+            "DELETE FROM students WHERE student_id = %s",
             (student_id,)
         )
 
@@ -230,7 +240,7 @@ def allocate_room():
 
     with get_db() as con:
         student = con.execute(
-            "SELECT room_id FROM students WHERE student_id = ?",
+            "SELECT room_id FROM students WHERE student_id = %s",
             (student_id,)
         ).fetchone()
 
@@ -243,22 +253,22 @@ def allocate_room():
             }), 409
 
         room = con.execute(
-            "SELECT capacity FROM rooms WHERE id = ?", (room_id,)
+            "SELECT capacity FROM rooms WHERE id = %s", (room_id,)
         ).fetchone()
 
         if room is None:
             return jsonify({"error": "Room not found."}), 404
 
         occupied = con.execute(
-            "SELECT COUNT(*) FROM students WHERE room_id = ?",
+            "SELECT COUNT(*) AS count FROM students WHERE room_id = %s",
             (room_id,)
-        ).fetchone()[0]
+        ).fetchone()["count"]
 
         if occupied >= room["capacity"]:
             return jsonify({"error": "Room is full."}), 409
 
         con.execute(
-            "UPDATE students SET room_id = ? WHERE student_id = ?",
+            "UPDATE students SET room_id = %s WHERE student_id = %s",
             (room_id, student_id)
         )
 
@@ -299,10 +309,11 @@ def add_complaint():
     with get_db() as con:
         cur = con.execute("""
             INSERT INTO complaints (student_name, room_id, message)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
+            RETURNING id
         """, (student_name, room_id, message))
 
-        complaint_id = cur.lastrowid
+        complaint_id = cur.fetchone()["id"]
 
     return jsonify({
         "id": complaint_id,
@@ -320,7 +331,7 @@ def update_complaint(complaint_id):
 
     with get_db() as con:
         cur = con.execute(
-            "UPDATE complaints SET status = ? WHERE id = ?",
+            "UPDATE complaints SET status = %s WHERE id = %s",
             (status, complaint_id)
         )
 
@@ -357,10 +368,11 @@ def add_notice():
     with get_db() as con:
         cur = con.execute("""
             INSERT INTO notices (title, priority, message)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
+            RETURNING id
         """, (title, priority, message))
 
-        notice_id = cur.lastrowid
+        notice_id = cur.fetchone()["id"]
 
     return jsonify({
         "id": notice_id,
@@ -398,7 +410,7 @@ def save_contact(role):
     with get_db() as con:
         con.execute("""
             INSERT INTO contacts (role, name, phone)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
             ON CONFLICT(role) DO UPDATE SET
                 name = excluded.name,
                 phone = excluded.phone
@@ -412,30 +424,30 @@ def save_contact(role):
 def dashboard():
     with get_db() as con:
         total_rooms = con.execute(
-            "SELECT COUNT(*) FROM rooms"
-        ).fetchone()[0]
+            "SELECT COUNT(*) AS count FROM rooms"
+        ).fetchone()["count"]
 
         total_beds = con.execute(
-            "SELECT COALESCE(SUM(capacity), 0) FROM rooms"
-        ).fetchone()[0]
+            "SELECT COALESCE(SUM(capacity), 0) AS total FROM rooms"
+        ).fetchone()["total"]
 
         total_students = con.execute(
-            "SELECT COUNT(*) FROM students"
-        ).fetchone()[0]
+            "SELECT COUNT(*) AS count FROM students"
+        ).fetchone()["count"]
 
         occupied_rooms = con.execute("""
-            SELECT COUNT(DISTINCT room_id)
+            SELECT COUNT(DISTINCT room_id) AS count
             FROM students
             WHERE room_id IS NOT NULL
-        """).fetchone()[0]
+        """).fetchone()["count"]
 
         complaint_count = con.execute(
-            "SELECT COUNT(*) FROM complaints"
-        ).fetchone()[0]
+            "SELECT COUNT(*) AS count FROM complaints"
+        ).fetchone()["count"]
 
         notice_count = con.execute(
-            "SELECT COUNT(*) FROM notices"
-        ).fetchone()[0]
+            "SELECT COUNT(*) AS count FROM notices"
+        ).fetchone()["count"]
 
     available_beds = total_beds - total_students
 
@@ -456,11 +468,7 @@ def dashboard():
 
 
 # ---------- START SERVER ----------
-# Initialize database when the application starts
-init_db()
-
 if __name__ == "__main__":
-    import os
     app.run(
         host="0.0.0.0",
         port=int(os.environ.get("PORT", 5000)),
