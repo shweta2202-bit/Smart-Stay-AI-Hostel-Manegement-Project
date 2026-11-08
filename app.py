@@ -70,10 +70,12 @@ def init_db():
         """)
 
         # Create rooms 1–250, each with four beds.
-        con.executemany(
-            "INSERT INTO rooms (id, capacity) VALUES (%s, 4) ON CONFLICT (id) DO NOTHING",
-            [(i,) for i in range(1, 251)]
-        )
+                # Create rooms 1–250, each with four beds.
+        with con.cursor() as cur:
+            cur.executemany(
+                "INSERT INTO rooms (id, capacity) VALUES (%s, 4) ON CONFLICT (id) DO NOTHING",
+                [(i,) for i in range(1, 251)]
+            )
 
 
 def query_all(sql, params=()):
